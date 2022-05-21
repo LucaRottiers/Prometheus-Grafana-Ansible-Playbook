@@ -5,6 +5,8 @@
 # <https://github.com/bertvv/ansible-skeleton>
 ---
 - name: srv010
+  memory: 4096
+  cpus: 2
   ip: 192.168.56.40
 
 # Example of a more elaborate host definition

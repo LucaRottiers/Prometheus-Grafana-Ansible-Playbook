@@ -6,12 +6,5 @@
     name: prometheus
     state: restarted
 
-- name: reload prometheus
-  become: true
-  systemd:
-    name: prometheus
-    state: reloaded
-
-- name: Reload systemd
+- name: reload systemd
   command: systemctl daemon-reload
-  listen: systemd_reload

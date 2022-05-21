@@ -28,7 +28,7 @@
   file:
     path: "{{ item }}"
     state: directory
-    owner: root
+    owner: "{{ prometheus_user }}"
     group: "{{ prometheus_group }}"
     mode: 0770
   with_items:
@@ -42,7 +42,6 @@
       get_url:
         url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
         dest: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
-        checksum: "sha256:{{ __prometheus_checksum }}"
       register: _download_archive
       until: _download_archive is succeeded
       retries: 5
@@ -62,60 +61,36 @@
     - name: propagate official prometheus and promtool binaries
       copy:
         src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
-        dest: "{{ _prometheus_binary_install_dir }}/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
         mode: 0755
-        owner: root
-        group: root
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
       with_items:
         - prometheus
         - promtool
-      notify:
-        - restart prometheus
 
     - name: propagate official console templates
       copy:
         src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}/"
         dest: "{{ prometheus_config_dir }}/{{ item }}/"
         mode: 0644
-        owner: root
-        group: root
+        owner: "{{ prometheus_user }}"
+        group: "{{ prometheus_group }}"
       with_items:
         - console_libraries
         - consoles
-      notify:
-        - restart prometheus
   when:
     - prometheus_binary_local_dir | length == 0
     - not prometheus_skip_install
 
-- name: propagate locally distributed prometheus and promtool binaries
-  copy:
-    src: "{{ prometheus_binary_local_dir }}/{{ item }}"
-    dest: "{{ _prometheus_binary_install_dir }}/{{ item }}"
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    - prometheus
-    - promtool
-  when:
-    - prometheus_binary_local_dir | length > 0
-    - not prometheus_skip_install
-  notify:
-    - restart prometheus
-
-- name: Delete prometheus tmp folder
+- name: Delete prometheus .tar.gz file
   file:
-    path: '/tmp/prometheus-{{ prometheus_version }}.linux-amd64'
+    path: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
     state: absent
 
 - name: create systemd service unit
   template:
     src: prometheus.service.j2
     dest: /etc/systemd/system/prometheus.service
-    owner: root
-    group: root
     mode: 0644
-  notify:
-    - systemd_reload
-    - restart prometheus
+  notify: reload systemd

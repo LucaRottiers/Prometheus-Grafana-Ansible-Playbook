@@ -13,11 +13,15 @@
   become: true
   tags: prometheus_configure
 
-- name: ensure prometheus service is started and enabled
-  become: true
-  systemd:
-    daemon_reload: true
+- name: Start prometheus service
+  service:
     name: prometheus
     state: started
-    enabled: true
+    enabled: yes
   tags: prometheus_run
+
+- name: Check if prometheus is accessible
+  uri:
+    url: http://localhost:9090
+    method: GET
+    status_code: 200
