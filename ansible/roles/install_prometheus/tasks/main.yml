@@ -1,4 +1,26 @@
 ---
+- block:
+  - name: get latest release
+    uri:
+      url: "https://api.github.com/repos/prometheus/prometheus/releases/latest"
+      method: GET
+      return_content: true
+      status_code: 200
+      body_format: json
+      validate_certs: false
+      user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+      password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+    no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+    register: _latest_release
+    until: _latest_release.status == 200
+    retries: 5
+
+  - name: get prometheus version to the latest
+    set_fact:
+      prometheus_version: "{{ _latest_release.json.tag_name[1:] }}"
+  when:
+    - prometheus_version == "latest"
+
 - name: create prometheus system group
   group:
     name: "{{ prometheus_group }}"
@@ -48,14 +70,6 @@
     - prometheus
     - promtool
 
-- name: delete prometheus tmp folder and .tar.gz file
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items: 
-    - /tmp/prometheus-{{ prometheus_version }}.linux-amd64
-    - /tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
-
 - name: Creates prometheus data directory
   file: 
     path: "{{ prometheus_data_dir }}"
@@ -66,23 +80,42 @@
 
 - name: Creates prometheus config directory
   file: 
-    path: "/etc/prometheus/"
+    path: "{{ prometheus_config_dir }}"
     state: directory
     owner: "{{ prometheus_user }}"
     group: "{{ prometheus_group }}"
     mode: 0755
 
-- name: config file
+- name: propagate official console templates
+  copy:
+    src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}/"
+    dest: "{{ prometheus_config_dir }}/{{ item }}/"
+    mode: 0644
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+  with_items:
+    - console_libraries
+    - consoles
+
+- name: delete prometheus tmp folder and .tar.gz file
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items: 
+    - /tmp/prometheus-{{ prometheus_version }}.linux-amd64
+    - /tmp/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
+
+- name: configure prometheus
   template:
-    src: prometheus.conf.j2
-    dest: /etc/prometheus/prometheus.conf
+    src: "{{ prometheus_config_file }}"
+    dest: "{{ prometheus_config_dir }}/prometheus.conf"
 
 - name: alert config file
   copy:
     src: "{{ role_path }}/files/alertrules.yml"
     dest: /etc/prometheus/alert.rules.yml
 
-- name: Copy systemd init file
+- name: create systemd service unit
   template:
     src: init.service.j2
     dest: /etc/systemd/system/prometheus.service
