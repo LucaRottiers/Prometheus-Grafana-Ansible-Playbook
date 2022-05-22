@@ -4,7 +4,7 @@ prometheus_group: "prometheus"
 
 prometheus_data_dir: /data/prometheus
 prometheus_config_dir: /etc/prometheus
-prometheus_conf_file: "prometheus.conf.j2"
+prometheus_config_file: "prometheus.conf.j2"
 
 service_name: "prometheus"
 service_exec_command: "/usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.conf --storage.tsdb.path=/data/prometheus --storage.tsdb.retention=2d"

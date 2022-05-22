@@ -1,0 +1,16 @@
+[Unit]
+Description={{ service_name }}
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User={{ pushgateway_user }}
+Group={{ pushgateway_group }}
+Restart=always
+RestartSec=2
+StartLimitInterval=0
+Type=simple
+ExecStart={{ service_exec_command }}
+
+[Install]
+WantedBy=multi-user.target

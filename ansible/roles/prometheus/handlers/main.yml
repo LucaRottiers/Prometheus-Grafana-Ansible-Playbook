@@ -1,0 +1,10 @@
+---
+- name: restart the prometheus service
+  service:
+    name: "{{ service_name }}"
+    state: restarted
+  listen: event_restart_prometheus
+
+- name: reload systemd
+  command: systemctl daemon-reload
+  listen: reload_systemd

@@ -2,4 +2,5 @@
 ---
 - hosts: all
   roles: 
-    - install_prometheus
+    - prometheus
+    - pushgateway

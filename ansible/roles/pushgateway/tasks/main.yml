@@ -1,0 +1,93 @@
+---
+- block:
+  - name: get latest release
+    uri:
+      url: "https://api.github.com/repos/prometheus/pushgateway/releases/latest"
+      method: GET
+      return_content: true
+      status_code: 200
+      body_format: json
+      validate_certs: false
+      user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+      password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+    no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+    register: _latest_release
+    until: _latest_release.status == 200
+    retries: 5
+
+  - name: set pushgateway version to the latest
+    set_fact:
+      pushgateway_version: "{{ _latest_release.json.tag_name[1:] }}"
+  when:
+    - pushgateway_version == "latest"
+
+- name: create pushgateway system group
+  group:
+    name: "{{ pushgateway_group }}"
+    system: true
+    state: present
+
+- name: create pushgateway system user
+  user:
+    name: "{{ pushgateway_user }}"
+    group: "{{ pushgateway_group }}"
+    system: true
+    shell: "/sbin/nologin"
+    comment: "pushgateway nologin user"
+    createhome: false
+    state: present
+
+- name: download pushgateway binary to local folder
+  become: false
+  get_url:
+    url: "https://github.com/prometheus/pushgateway/releases/download/v{{ pushgateway_version }}/pushgateway-{{ pushgateway_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/pushgateway-{{ pushgateway_version }}.linux-amd64.tar.gz"
+  register: _download_archive
+  until: _download_archive is succeeded
+  retries: 5
+  delay: 2
+  delegate_to: localhost
+  check_mode: false
+
+- name: unpack pushgateway binaries
+  become: false
+  unarchive:
+    src: "/tmp/pushgateway-{{ pushgateway_version }}.linux-amd64.tar.gz"
+    dest: "/tmp"
+    creates: "/tmp/pushgateway-{{ pushgateway_version }}.linux-amd64/pushgateway"
+  delegate_to: localhost
+  check_mode: false
+
+- name: Copy pushgateway pushgateway file to bin
+  copy:
+    src: "/tmp/pushgateway-{{ pushgateway_version }}.linux-amd64/pushgateway"
+    dest: "/usr/local/bin/pushgateway"
+    owner: "{{ pushgateway_user }}"
+    group: "{{ pushgateway_group }}"
+    mode: 0755
+
+- name: delete pushgateway tmp folder and .tar.gz file
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items: 
+    - /tmp/pushgateway-{{ pushgateway_version }}.linux-amd64
+    - /tmp/pushgateway-{{ pushgateway_version }}.linux-amd64.tar.gz
+
+- name: create systemd service unit
+  template:
+    src: pushgateway.service.j2
+    dest: /etc/systemd/system/pushgateway.service
+  notify: reload_systemd
+
+- name: Start pushgateway service
+  service:
+    name: "{{ service_name }}"
+    state: started
+    enabled: yes
+
+- name: Check if pushgateway emits metrices
+  uri:
+    url: http://127.0.0.1:9091/metrics
+    method: GET
+    status_code: 200

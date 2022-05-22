@@ -1,0 +1,6 @@
+---
+pushgateway_user: "pushgateway"
+pushgateway_group: "pushgateway"
+
+service_name: "pushgateway"
+service_exec_command: "/usr/local/bin/pushgateway"
