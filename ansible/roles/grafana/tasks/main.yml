@@ -38,6 +38,17 @@
     state: started
     enabled: yes 
 
+- name: check if prometheus datasource exists
+  uri:
+    url: "http://localhost:3000/api/datasources/name/prometheus"
+    user: "{{ grafana_user }}"
+    password: "{{ grafana_password }}"
+    force_basic_auth: yes
+  register: grafana_prometheus
+  failed_when: false
+  changed_when: false
+  when: grafana_prometheus
+
 - name: create prometheus datasource
   grafana_datasource:
     name: "{{ item.name }}"
@@ -48,6 +59,7 @@
     url: "{{ item.url }}"
     state: present
   with_items: "{{ data_source }}"
+  when: grafana_prometheus and grafana_prometheus.status == 404
 
 - name: check if grafana is accessible
   uri:
