@@ -1,0 +1,45 @@
+---
+- block:
+  - name: get latest release
+    uri:
+      url: "https://api.github.com/repos/grafana/grafana/releases/latest"
+      method: GET
+      return_content: true
+      status_code: 200
+      body_format: json
+      validate_certs: false
+      user: "{{ lookup('env', 'GH_USER') | default(omit) }}"
+      password: "{{ lookup('env', 'GH_TOKEN') | default(omit) }}"
+    no_log: "{{ not lookup('env', 'ANSIBLE_DEBUG') | bool }}"
+    register: _latest_release
+    until: _latest_release.status == 200
+    retries: 5
+
+  - name: set grafana version to the latest
+    set_fact:
+      grafana_version: "{{ _latest_release.json.tag_name[1:] }}"
+  when:
+    - grafana_version == "latest"
+
+- name: install grafana
+  yum:
+    name: https://dl.grafana.com/enterprise/release/grafana-enterprise-{{ grafana_version }}-1.x86_64.rpm
+    state: latest
+
+- name: configure grafana
+  template:
+    src: "{{ grafana_config_file }}"
+    dest: "{{ grafana_config_dir }}/grafana.ini"
+  notify: event_restart_grafana
+
+- name: start grafana-server service
+  service:
+    name: "{{ service_name }}"
+    state: started
+    enabled: yes 
+
+- name: check if grafana is accessible
+  uri:
+    url: http://localhost:3000
+    method: GET
+    status_code: 200

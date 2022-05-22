@@ -1,0 +1,5 @@
+---
+grafana_config_dir: /etc/grafana
+grafana_config_file: "grafana.conf.j2"
+
+service_name: "grafana-server"
