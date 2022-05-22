@@ -32,7 +32,7 @@
     name: "{{ prometheus_user }}"
     group: "{{ prometheus_group }}"
     system: true
-    shell: "/sbin/nologin"
+    shell: "/sbin/nologin" 
     comment: "prometheus nologin user"
     createhome: false
     state: present
