@@ -3,3 +3,12 @@ grafana_config_dir: /etc/grafana
 grafana_config_file: "grafana.conf.j2"
 
 service_name: "grafana-server"
+
+grafana_url: "http://localhost:3000"
+grafana_user: "admin"
+grafana_password: "admin"
+
+data_source:
+  - name: "prometheus"
+    ds_type: "prometheus"
+    url: "http://localhost:9090"

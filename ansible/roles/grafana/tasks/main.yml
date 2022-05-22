@@ -38,6 +38,17 @@
     state: started
     enabled: yes 
 
+- name: create prometheus datasource
+  grafana_datasource:
+    name: "{{ item.name }}"
+    grafana_url: "{{ grafana_url }}"
+    grafana_user: "{{ grafana_user }}"
+    grafana_password: "{{ grafana_password }}"
+    ds_type: "{{ item.ds_type }}"
+    url: "{{ item.url }}"
+    state: present
+  with_items: "{{ data_source }}"
+
 - name: check if grafana is accessible
   uri:
     url: http://localhost:3000
