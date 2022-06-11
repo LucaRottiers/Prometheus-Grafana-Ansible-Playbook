@@ -110,4 +110,4 @@ The playbook will always install the most recent version of Grafana unless a spe
 
 The configuration of Grafana is based on its main config file ``/roles/grafana/templates/grafana.conf.j2``. This allows Grafana to run on the correct port and is responsible for various setting sush as authentication, TLS, altering, ...
 
-Unlik Prometheus, Grafana is installed using an RPM, because of that there is no need to explicitly configure it as a service.
+Unlike Prometheus, Grafana is installed using an RPM, because of that there is no need to explicitly configure it as a service.
